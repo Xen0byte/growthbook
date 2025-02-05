@@ -25,13 +25,17 @@ pre {
   color: var(--text-color-muted) !important;
 }
 
+.text-decoration-line-through {
+  text-decoration: line-through;
+}
+
 // endregion Typography
 
 // region Forms
 
 .form-control,
 .form-control:focus {
-  background-color: var(--surface-background-color);
+  background-color: var(--color-surface);
   color: var(--text-color-main);
 }
 
@@ -72,6 +76,10 @@ pre {
   background-color: var(--table-row-hover-background-color);
 }
 
+.table tbody + tbody {
+  border-top: 2px solid var(--border-color-100);
+}
+
 // endregion Tables
 
 // region Surfaces
@@ -79,6 +87,14 @@ pre {
 .card {
   background-color: var(--surface-background-color);
   border-color: var(--border-color-200);
+}
+.dark {
+  .card {
+    .card-header {
+      background-color: var(--surface-background-color-alt);
+      border-color: var(--border-color-200);
+    }
+  }
 }
 
 .bg-white {
@@ -89,6 +105,7 @@ pre {
   background-color: var(--surface-background-color-alt) !important;
 }
 
+/* Importants here are necessary to override Bootstrap's default (which also have !important) */
 .border {
   border-color: var(--border-color-200) !important;
 }
@@ -115,6 +132,16 @@ pre {
   background-color: var(--alert-info-background);
   border-color: var(--alert-info-border-color);
   color: var(--alert-info-color);
+
+  .alert-link {
+    color: var(--text-color-main);
+  }
+}
+
+.alert-info-gb-purple {
+  background-color: var(--alert-info-purple-background);
+  border-color: var(--alert-info-purple-border-color);
+  color: var(--alert-info-purple-color);
 
   .alert-link {
     color: var(--text-color-main);
@@ -179,6 +206,10 @@ pre {
 
 // region Drop down
 
+.dropdown-toggle {
+  display: flex;
+  align-items: center;
+}
 .dropdown-menu {
   background-color: var(--surface-background-color);
   color: var(--text-color-main);
@@ -192,10 +223,14 @@ pre {
     color: var(--text-color-main);
     background-color: var(--surface-background-color-alt);
   }
+  > svg,
+  > span > svg {
+    min-width: 20px;
+  }
 }
 
 .dropdown-divider {
-  border-color: var(--border-color-300);
+  border-color: var(--border-color-200);
 }
 
 // endregion Drop down
@@ -240,20 +275,19 @@ pre {
 // region Tabs
 
 .nav-tabs {
-  border-color: var(--border-color-300);
+  border-color: var(--border-color-200);
 }
-
 .nav-tabs .nav-link.active,
 .nav-tabs .nav-item.show .nav-link {
   color: var(--text-color-muted);
   background-color: var(--surface-background-color);
-  border-color: var(--border-color-300) var(--border-color-300)
+  border-color: var(--border-color-200) var(--border-color-200)
     var(--surface-background-color);
 }
 
 .nav-tabs .nav-link:hover,
 .nav-tabs .nav-link:focus {
-  border-color: var(--border-color-300) var(--border-color-300)
+  border-color: var(--border-color-200) var(--border-color-200)
     var(--surface-background-color);
 }
 

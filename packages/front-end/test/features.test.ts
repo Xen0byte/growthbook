@@ -1,5 +1,5 @@
 import stringify from "json-stringify-pretty-compact";
-import { AttributeData, condToJson, jsonToConds } from "../services/features";
+import { AttributeData, condToJson, jsonToConds } from "@/services/features";
 
 describe("json <-> conds", () => {
   const attributeMap: Map<string, AttributeData> = new Map();
@@ -9,6 +9,7 @@ describe("json <-> conds", () => {
     array: false,
     enum: [],
     identifier: false,
+    archived: false,
   });
   attributeMap.set("num", {
     attribute: "num",
@@ -16,6 +17,7 @@ describe("json <-> conds", () => {
     array: false,
     enum: [],
     identifier: false,
+    archived: false,
   });
   attributeMap.set("bool", {
     attribute: "bool",
@@ -23,6 +25,7 @@ describe("json <-> conds", () => {
     array: false,
     enum: [],
     identifier: false,
+    archived: false,
   });
   attributeMap.set("enum", {
     attribute: "enum",
@@ -30,6 +33,7 @@ describe("json <-> conds", () => {
     array: false,
     enum: ["foo", "bar"],
     identifier: false,
+    archived: false,
   });
   attributeMap.set("str_arr", {
     attribute: "str_arr",
@@ -37,6 +41,7 @@ describe("json <-> conds", () => {
     array: true,
     enum: [],
     identifier: false,
+    archived: false,
   });
   attributeMap.set("num_arr", {
     attribute: "num_arr",
@@ -44,6 +49,7 @@ describe("json <-> conds", () => {
     array: true,
     enum: [],
     identifier: false,
+    archived: false,
   });
 
   // Global operators
@@ -264,6 +270,10 @@ describe("json <-> conds", () => {
   });
   it("$not $regex null", () => {
     const json = stringify({ str: { $not: { $regex: null } } });
+    expect(jsonToConds(json, attributeMap)).toEqual(null);
+  });
+  it("string - $in operator - string contains comma", () => {
+    const json = stringify({ str: { $in: ["a,b", "c,d"] } });
     expect(jsonToConds(json, attributeMap)).toEqual(null);
   });
   /* TODO: This test case fails right now

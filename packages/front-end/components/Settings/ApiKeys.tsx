@@ -1,8 +1,8 @@
-import { FC } from "react";
-import useApi from "../../hooks/useApi";
-import LoadingOverlay from "../LoadingOverlay";
+import React, { FC } from "react";
 import { ApiKeyInterface } from "back-end/types/apikey";
-import SDKEndpoints from "../Features/SDKEndpoints";
+import Link from "next/link";
+import useApi from "@/hooks/useApi";
+import LoadingOverlay from "@/components/LoadingOverlay";
 import SecretApiKeys from "./SecretApiKeys";
 
 const ApiKeys: FC = () => {
@@ -18,7 +18,14 @@ const ApiKeys: FC = () => {
   return (
     <>
       <SecretApiKeys keys={data.keys} mutate={mutate} />
-      <SDKEndpoints keys={data.keys} mutate={mutate} />
+
+      <div className="alert alert-info mb-4">
+        You can also create{" "}
+        <Link href="/account/personal-access-tokens">
+          Personal Access Tokens
+        </Link>{" "}
+        for your user account
+      </div>
     </>
   );
 };

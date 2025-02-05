@@ -1,11 +1,13 @@
-import { MssqlConnectionParams } from "../../types/integrations/mssql";
-import { decryptDataSourceParams } from "../services/datasource";
+import { MssqlConnectionParams } from "back-end/types/integrations/mssql";
+import { decryptDataSourceParams } from "back-end/src/services/datasource";
+import { FormatDialect } from "back-end/src/util/sql";
+import { findOrCreateConnection } from "back-end/src/util/mssqlPoolManager";
+import { QueryResponse } from "back-end/src/types/Integration";
 import SqlIntegration from "./SqlIntegration";
-import mssql from "mssql";
-import { FormatDialect } from "../util/sql";
 
 export default class Mssql extends SqlIntegration {
-  params: MssqlConnectionParams;
+  params!: MssqlConnectionParams;
+  requiresSchema = false;
   setParams(encryptedParams: string) {
     this.params = decryptDataSourceParams<MssqlConnectionParams>(
       encryptedParams
@@ -17,18 +19,25 @@ export default class Mssql extends SqlIntegration {
   getSensitiveParamKeys(): string[] {
     return ["password"];
   }
-  async runQuery(sqlStr: string) {
-    const conn = await mssql.connect({
+  async runQuery(sqlStr: string): Promise<QueryResponse> {
+    const conn = await findOrCreateConnection(this.datasource.id, {
       server: this.params.server,
-      port: this.params.port,
+      port: parseInt(this.params.port + "", 10),
       user: this.params.user,
       password: this.params.password,
       database: this.params.database,
+      requestTimeout: (this.params.requestTimeout ?? 0) * 1000,
       options: this.params.options,
     });
 
     const results = await conn.request().query(sqlStr);
-    return results.recordset;
+    return { rows: results.recordset };
+  }
+
+  // MS SQL Server doesn't support the LIMIT keyword, so we have to use the TOP or OFFSET and FETCH keywords instead.
+  // (and OFFSET/FETCH only work when there is an ORDER BY clause)
+  selectStarLimit(table: string, limit: number): string {
+    return `SELECT TOP ${limit} * FROM ${table}`;
   }
 
   addTime(
@@ -43,25 +52,22 @@ export default class Mssql extends SqlIntegration {
     //return `DATETRUNC(day, ${col})`; <- this is only supported in SQL Server 2022 preview.
     return `cast(${col} as DATE)`;
   }
-  stddev(col: string) {
-    return `STDEV(${col})`;
-  }
-  avg(col: string) {
-    return `AVG(CAST(${col} as FLOAT))`;
-  }
-  variance(col: string) {
-    return `VAR(${col})`;
-  }
-  covariance(y: string, x: string): string {
-    return `(SUM(${x}*${y})-SUM(${x})*SUM(${y})/COUNT(*))/(COUNT(*)-1)`;
-  }
   ensureFloat(col: string): string {
     return `CAST(${col} as FLOAT)`;
   }
   formatDate(col: string): string {
-    return `FORMAT(${col}, "yyyy-MM-dd")`;
+    return `FORMAT(${col}, 'yyyy-MM-dd')`;
   }
   castToString(col: string): string {
     return `cast(${col} as varchar(256))`;
+  }
+  formatDateTimeString(col: string): string {
+    return `CONVERT(VARCHAR(25), ${col}, 121)`;
+  }
+  approxQuantile(value: string, quantile: string | number): string {
+    return `APPROX_PERCENTILE_CONT(${quantile}) WITHIN GROUP (ORDER BY ${value})`;
+  }
+  getDefaultDatabase() {
+    return this.params.database;
   }
 }

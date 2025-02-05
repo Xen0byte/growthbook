@@ -1,9 +1,9 @@
 import React from "react";
-import Field from "../../Forms/Field";
-import Modal from "../../Modal";
 import { useForm } from "react-hook-form";
-import { useAuth } from "../../../services/auth";
 import { ExpandedMember } from "back-end/types/organization";
+import Field from "@/components/Forms/Field";
+import Modal from "@/components/Modal";
+import { useAuth } from "@/services/auth";
 
 type Props = {
   member: ExpandedMember;
@@ -20,6 +20,7 @@ export default function AdminSetPasswordModal({ member, close }: Props) {
 
   return (
     <Modal
+      trackingEventModalType=""
       close={close}
       header="Change Password"
       open={true}

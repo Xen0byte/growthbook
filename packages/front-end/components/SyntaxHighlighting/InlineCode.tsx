@@ -3,12 +3,12 @@ import {
   tomorrow as dark,
   ghcolors as light,
 } from "react-syntax-highlighter/dist/cjs/styles/prism";
-import PrismFallback from "./PrismFallback";
-import { useAppearanceUITheme } from "../../services/AppearanceUIThemeProvider";
 import { Suspense } from "react";
-import { Language } from "./Code";
 import cloneDeep from "lodash/cloneDeep";
 import clsx from "clsx";
+import { useAppearanceUITheme } from "@/services/AppearanceUIThemeProvider";
+import { Language } from "./Code";
+import PrismFallback from "./PrismFallback";
 
 // Lazy-load syntax highlighting to improve page load time
 const Prism = dynamic(() => import("./Prism"), {
@@ -28,6 +28,9 @@ export default function InlineCode({ code, language, className }: Props) {
   style['code[class*="language-"]'].fontSize = "0.85rem";
   style['code[class*="language-"]'].lineHeight = 1.5;
   style['code[class*="language-"]'].fontWeight = 600;
+  // this next line actually doesn't do anything- its overridden somewhere in Prism.
+  style['code[class*="language-"]'].whiteSpace = "pre-wrap";
+  style['pre[class*="language-"]'].whiteSpace = "pre-wrap";
 
   return (
     <Suspense
@@ -43,7 +46,7 @@ export default function InlineCode({ code, language, className }: Props) {
       <Prism
         language={language}
         style={style}
-        className={clsx("border-0 p-0 m-0 bg-transparent", className)}
+        className={clsx("border-0 p-0 m-0 bg-transparent wrap-code", className)}
         showLineNumbers={false}
       >
         {code}

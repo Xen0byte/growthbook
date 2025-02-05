@@ -1,5 +1,5 @@
-import styles from "./ConfirmModal.module.scss";
 import clsx from "clsx";
+import styles from "./ConfirmModal.module.scss";
 
 type Props = {
   title: string;
@@ -51,7 +51,7 @@ const ConfirmModal = ({
         aria-labelledby="exampleModalLabel"
         aria-hidden="true"
       >
-        <div className="modal-dialog" role="document">
+        <div className="modal-dialog modal-dialog-centered" role="document">
           <div className="modal-content">
             <div className={`modal-body ${styles.modaltitle}`}>
               <h5 className="modal-title">{title}</h5>

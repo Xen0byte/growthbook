@@ -1,10 +1,10 @@
-import { isCloud } from "../../services/env";
+import { isCloud } from "@/services/env";
 
 export default function HostWarning({
   host,
   setHost,
 }: {
-  host: string;
+  host?: string;
   setHost: (host: string) => void;
 }) {
   // Trying to connect to localhost

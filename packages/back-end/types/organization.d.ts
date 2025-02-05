@@ -3,8 +3,19 @@ import {
   ENV_SCOPED_PERMISSIONS,
   GLOBAL_PERMISSIONS,
   PROJECT_SCOPED_PERMISSIONS,
-} from "../src/util/organization.util";
-import { ImplementationType } from "./experiment";
+  Policy,
+} from "shared/permissions";
+import { z } from "zod";
+import { environment } from "back-end/src/routers/environment/environment.validators";
+import type { ReqContextClass } from "back-end/src/services/context";
+import { attributeDataTypes } from "back-end/src/util/organization.util";
+import { AttributionModel, ImplementationType } from "./experiment";
+import type { PValueCorrection, StatsEngine } from "./stats";
+import {
+  MetricCappingSettings,
+  MetricPriorSettings,
+  MetricWindowSettings,
+} from "./fact-table";
 
 export type EnvScopedPermission = typeof ENV_SCOPED_PERMISSIONS[number];
 export type ProjectScopedPermission = typeof PROJECT_SCOPED_PERMISSIONS[number];
@@ -15,30 +26,46 @@ export type Permission =
   | EnvScopedPermission
   | ProjectScopedPermission;
 
-export type MemberRole =
+export type PermissionsObject = Partial<Record<Permission, boolean>>;
+
+export type UserPermission = {
+  environments: string[];
+  limitAccessByEnvironment: boolean;
+  permissions: PermissionsObject;
+};
+
+export type UserPermissions = {
+  global: UserPermission;
+  projects: { [key: string]: UserPermission };
+};
+export type RequireReview = {
+  requireReviewOn: boolean;
+  resetReviewOnChange: boolean;
+  environments: string[];
+  projects: string[];
+};
+
+export type DefaultMemberRole =
+  | "noaccess"
   | "readonly"
   | "collaborator"
-  | "designer"
+  | "visualEditor"
   | "analyst"
-  | "developer"
   | "engineer"
   | "experimenter"
   | "admin";
 
 export type Role = {
-  id: MemberRole;
+  id: string;
   description: string;
-  permissions: Permission[];
+  policies: Policy[];
 };
 
-export type AccountPlan = "oss" | "starter" | "pro" | "pro_sso" | "enterprise";
-export type CommercialFeature = "sso" | "advanced-permissions";
-export type CommercialFeaturesMap = Record<AccountPlan, Set<CommercialFeature>>;
-
 export interface MemberRoleInfo {
-  role: MemberRole;
+  role: string;
   limitAccessByEnvironment: boolean;
   environments: string[];
+  teams?: string[];
 }
 
 export interface ProjectMemberRole extends MemberRoleInfo {
@@ -55,14 +82,29 @@ export interface Invite extends MemberRoleWithProjects {
   dateCreated: Date;
 }
 
-export interface Member extends MemberRoleWithProjects {
+export interface PendingMember extends MemberRoleWithProjects {
   id: string;
+  name: string;
+  email: string;
+  dateCreated: Date;
 }
 
-export interface ExpandedMember extends Member {
+export interface Member extends MemberRoleWithProjects {
+  id: string;
+  dateCreated?: Date;
+  externalId?: string;
+  managedByIdp?: boolean;
+  lastLoginDate?: Date;
+}
+
+export interface ExpandedMemberInfo {
   email: string;
   name: string;
+  verified: boolean;
+  numTeams?: number;
 }
+
+export type ExpandedMember = Member & ExpandedMemberInfo;
 
 export interface NorthStarMetric {
   //enabled: boolean;
@@ -78,28 +120,34 @@ export interface MetricDefaults {
   minimumSampleSize?: number;
   maxPercentageChange?: number;
   minPercentageChange?: number;
+  windowSettings?: MetricWindowSettings;
+  cappingSettings?: MetricCappingSettings;
+  priorSettings?: MetricPriorSettings;
 }
 
 export interface Namespaces {
   name: string;
+  label: string;
   description: string;
   status: "active" | "inactive";
 }
 
-export type SDKAttributeType =
-  | "string"
-  | "number"
-  | "boolean"
-  | "string[]"
-  | "number[]"
-  | "enum";
+export type SDKAttributeFormat = "" | "version" | "date" | "isoCountryCode";
 
-export type SDKAttributeSchema = {
+export type SDKAttributeType = typeof attributeDataTypes[number];
+
+export type SDKAttribute = {
   property: string;
   datatype: SDKAttributeType;
+  description?: string;
   hashAttribute?: boolean;
   enum?: string;
-}[];
+  archived?: boolean;
+  format?: SDKAttributeFormat;
+  projects?: string[];
+};
+
+export type SDKAttributeSchema = SDKAttribute[];
 
 export type ExperimentUpdateSchedule = {
   type: "cron" | "never" | "stale";
@@ -107,12 +155,7 @@ export type ExperimentUpdateSchedule = {
   hours?: number;
 };
 
-export type Environment = {
-  id: string;
-  description?: string;
-  toggleOnList?: boolean;
-  defaultState?: boolean;
-};
+export type Environment = z.infer<typeof environment>;
 
 export interface OrganizationSettings {
   visualEditorEnabled?: boolean;
@@ -135,8 +178,44 @@ export interface OrganizationSettings {
   videoInstructionsViewed?: boolean;
   multipleExposureMinPercent?: number;
   defaultRole?: MemberRoleInfo;
+  statsEngine?: StatsEngine;
+  pValueThreshold?: number;
+  pValueCorrection?: PValueCorrection;
+  regressionAdjustmentEnabled?: boolean;
+  regressionAdjustmentDays?: number;
+  runHealthTrafficQuery?: boolean;
+  srmThreshold?: number;
   /** @deprecated */
   implementationTypes?: ImplementationType[];
+  attributionModel?: AttributionModel;
+  sequentialTestingEnabled?: boolean;
+  sequentialTestingTuningParameter?: number;
+  displayCurrency?: string;
+  secureAttributeSalt?: string;
+  killswitchConfirmation?: boolean;
+  requireReviews?: boolean | RequireReview[];
+  defaultDataSource?: string;
+  testQueryDays?: number;
+  disableMultiMetricQueries?: boolean;
+  useStickyBucketing?: boolean;
+  useFallbackAttributes?: boolean;
+  codeReferencesEnabled?: boolean;
+  codeRefsBranchesToFilter?: string[];
+  codeRefsPlatformUrl?: string;
+  powerCalculatorEnabled?: boolean;
+  featureKeyExample?: string; // Example Key of feature flag (e.g. "feature-20240201-name")
+  featureRegexValidator?: string; // Regex to validate feature flag name (e.g. ^.+-\d{8}-.+$)
+  featureListMarkdown?: string;
+  featurePageMarkdown?: string;
+  experimentListMarkdown?: string;
+  experimentPageMarkdown?: string;
+  metricListMarkdown?: string;
+  metricPageMarkdown?: string;
+  banditScheduleValue?: number;
+  banditScheduleUnit?: "hours" | "days";
+  banditBurnInValue?: number;
+  banditBurnInUnit?: "hours" | "days";
+  requireExperimentTemplates?: boolean;
 }
 
 export interface SubscriptionQuote {
@@ -166,10 +245,20 @@ export interface VercelConnection {
   teamId: string | null;
 }
 
+/**
+ * The type for the global organization message component
+ */
+export type OrganizationMessage = {
+  message: string;
+  level: "info" | "danger" | "warning";
+};
+
 export interface OrganizationInterface {
   id: string;
   url: string;
   dateCreated: Date;
+  verifiedDomain?: string;
+  externalId?: string;
   name: string;
   ownerEmail: string;
   stripeCustomerId?: string;
@@ -179,6 +268,7 @@ export interface OrganizationInterface {
   discountCode?: string;
   priceId?: string;
   disableSelfServeBilling?: boolean;
+  freeTrialDate?: Date;
   enterprise?: boolean;
   subscription?: {
     id: string;
@@ -191,17 +281,29 @@ export interface OrganizationInterface {
     cancel_at_period_end: boolean;
     planNickname: string | null;
     priceId?: string;
+    hasPaymentMethod?: boolean;
   };
+  licenseKey?: string;
+  autoApproveMembers?: boolean;
   members: Member[];
   invites: Invite[];
+  pendingMembers?: PendingMember[];
   connections?: OrganizationConnections;
   settings?: OrganizationSettings;
+  messages?: OrganizationMessage[];
+  getStartedChecklistItems?: string[];
+  customRoles?: Role[];
+  deactivatedRoles?: string[];
+  disabled?: boolean;
+  setupEventTracker?: string;
 }
 
 export type NamespaceUsage = Record<
   string,
   {
-    featureId: string;
+    link: string;
+    name: string;
+    id: string;
     trackingKey: string;
     environment: string;
     start: number;
@@ -209,24 +311,4 @@ export type NamespaceUsage = Record<
   }[]
 >;
 
-export type LicenseData = {
-  // Unique id for the license key
-  ref: string;
-  // Name of organization on the license
-  sub: string;
-  // Max number of seats
-  qty: number;
-  // Date issued
-  iat: string;
-  // Expiration date
-  exp: string;
-  // If it's a trial or not
-  trial: boolean;
-  // The plan (pro, enterprise, etc.)
-  plan: AccountPlan;
-  /**
-   * Expiration date (old style)
-   * @deprecated
-   */
-  eat?: string;
-};
+export type ReqContext = ReqContextClass;

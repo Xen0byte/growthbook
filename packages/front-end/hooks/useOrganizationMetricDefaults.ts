@@ -1,16 +1,48 @@
 import { useCallback, useMemo } from "react";
-import { MetricDefaults } from "back-end/types/organization";
+import { OrganizationSettings } from "back-end/types/organization";
+import {
+  MetricCappingSettings,
+  MetricPriorSettings,
+  MetricWindowSettings,
+} from "back-end/types/fact-table";
+import {
+  DEFAULT_MAX_PERCENT_CHANGE,
+  DEFAULT_METRIC_CAPPING,
+  DEFAULT_METRIC_CAPPING_VALUE,
+  DEFAULT_METRIC_WINDOW,
+  DEFAULT_METRIC_WINDOW_DELAY_HOURS,
+  DEFAULT_METRIC_WINDOW_HOURS,
+  DEFAULT_MIN_PERCENT_CHANGE,
+  DEFAULT_MIN_SAMPLE_SIZE,
+  DEFAULT_PROPER_PRIOR_STDDEV,
+} from "shared/constants";
 import useOrgSettings from "./useOrgSettings";
-import { MetricInterface } from "back-end/types/metric";
 
-const defaultMaxPercentChange = 0.5;
-const defaultMinPercentChange = 0.005;
-const defaultMinSampleSize = 150;
+const defaultMetricWindowSettings: MetricWindowSettings = {
+  type: DEFAULT_METRIC_WINDOW,
+  windowValue: DEFAULT_METRIC_WINDOW_HOURS,
+  windowUnit: "hours",
+  delayValue: DEFAULT_METRIC_WINDOW_DELAY_HOURS,
+  delayUnit: "hours",
+};
+const defaultMetricCappingSettings: MetricCappingSettings = {
+  type: DEFAULT_METRIC_CAPPING,
+  value: DEFAULT_METRIC_CAPPING_VALUE,
+};
+const defaultMetricPriorSettings: MetricPriorSettings = {
+  override: false,
+  proper: false,
+  mean: 0,
+  stddev: DEFAULT_PROPER_PRIOR_STDDEV,
+};
 
-const METRIC_DEFAULTS = {
-  minimumSampleSize: defaultMinSampleSize,
-  maxPercentageChange: defaultMaxPercentChange,
-  minPercentageChange: defaultMinPercentChange,
+export const METRIC_DEFAULTS = {
+  minimumSampleSize: DEFAULT_MIN_SAMPLE_SIZE,
+  maxPercentageChange: DEFAULT_MAX_PERCENT_CHANGE,
+  minPercentageChange: DEFAULT_MIN_PERCENT_CHANGE,
+  windowSettings: defaultMetricWindowSettings,
+  cappingSettings: defaultMetricCappingSettings,
+  priorSettings: defaultMetricPriorSettings,
 };
 
 /**
@@ -18,13 +50,20 @@ const METRIC_DEFAULTS = {
  * If an organization has them set, use them, otherwise use the hardcoded defaults.
  * Helper methods will consider zero (0) as a valid value.
  */
-type OrganizationMetricDefaults = {
+export type OrganizationMetricDefaults = {
   /**
    * The default values, with this precedence:
    *  - organization defaults
    *  - hardcoded defaults
    */
-  metricDefaults: MetricDefaults;
+  metricDefaults: {
+    minimumSampleSize: number;
+    maxPercentageChange: number;
+    minPercentageChange: number;
+    windowSettings: MetricWindowSettings;
+    cappingSettings: MetricCappingSettings;
+    priorSettings: MetricPriorSettings;
+  };
 
   /**
    * Returns the max percentage change for the provided metric,
@@ -34,7 +73,9 @@ type OrganizationMetricDefaults = {
    * @param metric
    * @return number
    */
-  getMaxPercentageChangeForMetric: (metric: Partial<MetricInterface>) => number;
+  getMaxPercentageChangeForMetric: (metric: {
+    maxPercentChange?: number;
+  }) => number;
 
   /**
    * Returns the min percentage change for the provided metric,
@@ -44,20 +85,33 @@ type OrganizationMetricDefaults = {
    * @param metric
    * @return number
    */
-  getMinPercentageChangeForMetric: (metric: Partial<MetricInterface>) => number;
+  getMinPercentageChangeForMetric: (metric: {
+    minPercentChange?: number;
+  }) => number;
 
   /**
-   * Returns the minimum sample size for the provided metric,
+   * Returns the minimum metric total for the provided metric,
    * considering 0 (zero) as a valid value.
    * @param metric
    * @return number
    */
-  getMinSampleSizeForMetric: (metric: Partial<MetricInterface>) => number;
+  getMinSampleSizeForMetric: (metric: { minSampleSize?: number }) => number;
+};
+
+export type OrganizationSettingsWithMetricDefaults = Omit<
+  OrganizationSettings,
+  "metricDefaults"
+> & {
+  metricDefaults: {
+    minimumSampleSize: number;
+    maxPercentageChange: number;
+    minPercentageChange: number;
+    priorSettings: MetricPriorSettings;
+  };
 };
 
 export const useOrganizationMetricDefaults = (): OrganizationMetricDefaults => {
   const orgSettings = useOrgSettings();
-
   /**
    * @link OrganizationMetricDefaults#metricDefaults
    */
@@ -68,12 +122,11 @@ export const useOrganizationMetricDefaults = (): OrganizationMetricDefaults => {
     }),
     [orgSettings]
   );
-
   /**
    * @link OrganizationMetricDefaults#getMaxPercentageChangeForMetric
    */
   const getMaxPercentageChangeForMetric = useCallback(
-    (metric: Partial<MetricInterface>): number => {
+    (metric: { maxPercentChange?: number }): number => {
       const value = metric.maxPercentChange;
       if (typeof value === "number") return value;
 
@@ -86,7 +139,7 @@ export const useOrganizationMetricDefaults = (): OrganizationMetricDefaults => {
    * @link OrganizationMetricDefaults#getMinPercentageChangeForMetric
    */
   const getMinPercentageChangeForMetric = useCallback(
-    (metric: Partial<MetricInterface>): number => {
+    (metric: { minPercentChange?: number }): number => {
       const value = metric.minPercentChange;
       if (typeof value === "number") return value;
 
@@ -99,7 +152,7 @@ export const useOrganizationMetricDefaults = (): OrganizationMetricDefaults => {
    * @link OrganizationMetricDefaults#getMinSampleSizeForMetric
    */
   const getMinSampleSizeForMetric = useCallback(
-    (metric: Partial<MetricInterface>): number => {
+    (metric: { minSampleSize?: number }): number => {
       const value = metric.minSampleSize;
       if (typeof value === "number") return value;
 

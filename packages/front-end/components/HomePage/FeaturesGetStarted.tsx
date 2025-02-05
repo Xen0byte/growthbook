@@ -1,17 +1,19 @@
 import { useRouter } from "next/router";
 import { useState } from "react";
 import { FeatureInterface } from "back-end/types/feature";
-import track from "../../services/track";
-import CodeSnippetModal from "../Features/CodeSnippetModal";
-import EditAttributesModal from "../Features/EditAttributesModal";
-import FeatureModal from "../Features/FeatureModal";
-import DocumentationLinksSidebar from "./DocumentationLinksSidebar";
-import GetStartedStep from "./GetStartedStep";
-import useOrgSettings from "../../hooks/useOrgSettings";
 import { FaChrome } from "react-icons/fa";
-import usePermissions from "../../hooks/usePermissions";
-import { DocLink } from "../DocLink";
-import { useDefinitions } from "../../services/DefinitionsContext";
+import { getDemoDatasourceProjectIdForOrganization } from "shared/demo-datasource";
+import track from "@/services/track";
+import useOrgSettings from "@/hooks/useOrgSettings";
+import { useDefinitions } from "@/services/DefinitionsContext";
+import { useUser } from "@/services/UserContext";
+import useSDKConnections from "@/hooks/useSDKConnections";
+import FeatureModal from "@/components/Features/FeatureModal";
+import { DocLink } from "@/components/DocLink";
+import InitialSDKConnectionForm from "@/components/Features/SDKConnections/InitialSDKConnectionForm";
+import usePermissionsUtil from "@/hooks/usePermissionsUtils";
+import GetStartedStep from "./GetStartedStep";
+import DocumentationLinksSidebar from "./DocumentationLinksSidebar";
 
 export interface Props {
   features: FeatureInterface[];
@@ -20,17 +22,28 @@ export interface Props {
 export default function FeaturesGetStarted({ features }: Props) {
   const settings = useOrgSettings();
   const router = useRouter();
-  const permissions = usePermissions();
+  const permissionsUtil = usePermissionsUtil();
+
+  const { organization } = useUser();
+  const demoProjectId = getDemoDatasourceProjectIdForOrganization(
+    organization?.id || ""
+  );
+
+  const { data } = useSDKConnections();
+  const connections = data?.connections || [];
+  const hasActiveConnection =
+    connections.some((c) => c.connected) || !!settings?.sdkInstructionsViewed;
+
+  const hasFeatures = features.some((f) => f.project !== demoProjectId);
 
   let step = -1;
-  if (!settings?.sdkInstructionsViewed) {
+  if (!hasActiveConnection) {
     step = 1;
-  } else if (!features.length) {
+  } else if (!hasFeatures) {
     step = 2;
   }
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [attributeModalOpen, setAttributeModalOpen] = useState(false);
   const [codeModalOpen, setCodeModalOpen] = useState(false);
 
   const { project } = useDefinitions();
@@ -41,25 +54,28 @@ export default function FeaturesGetStarted({ features }: Props) {
         <FeatureModal
           close={() => setModalOpen(false)}
           onSuccess={async (feature) => {
-            const url = `/features/${feature.id}${
-              features.length > 0 ? "" : "?first"
-            }`;
+            const url = `/features/${feature.id}${hasFeatures ? "" : "?first"}`;
             await router.push(url);
           }}
         />
       )}
-      {attributeModalOpen && (
-        <EditAttributesModal close={() => setAttributeModalOpen(false)} />
-      )}
       {codeModalOpen && (
-        <CodeSnippetModal close={() => setCodeModalOpen(false)} />
+        <InitialSDKConnectionForm
+          close={() => setCodeModalOpen(false)}
+          feature={features[0]}
+          includeCheck={true}
+          cta="Check Connection"
+          goToNextStep={() => {
+            setCodeModalOpen(false);
+          }}
+        />
       )}
       <div className="row getstarted mb-3">
         <div className="col-12 col-lg-8 ">
           <div className={`card gsbox`} style={{ overflow: "hidden" }}>
             <GetStartedStep
               current={step === 1}
-              finished={settings?.sdkInstructionsViewed}
+              finished={hasActiveConnection}
               className="border-top"
               image="/images/coding-icon.svg"
               title="1. Install our SDK"
@@ -67,7 +83,7 @@ export default function FeaturesGetStarted({ features }: Props) {
               cta="View instructions"
               finishedCTA="View instructions"
               imageLeft={false}
-              permissionsError={!permissions.check("manageFeatures", project)}
+              permissionsError={!permissionsUtil.canViewFeatureModal(project)}
               onClick={(finished) => {
                 setCodeModalOpen(true);
                 if (!finished) {
@@ -79,7 +95,7 @@ export default function FeaturesGetStarted({ features }: Props) {
             />
             <GetStartedStep
               current={step === 2}
-              finished={features.length > 0}
+              finished={hasFeatures}
               className="border-top"
               image="/images/feature-icon.svg"
               title="2. Add your first feature"
@@ -87,7 +103,7 @@ export default function FeaturesGetStarted({ features }: Props) {
               cta="Add first feature"
               finishedCTA="Add a feature"
               imageLeft={true}
-              permissionsError={!permissions.check("manageFeatures", project)}
+              permissionsError={!permissionsUtil.canViewFeatureModal(project)}
               onClick={(finished) => {
                 setModalOpen(true);
                 if (!finished) {

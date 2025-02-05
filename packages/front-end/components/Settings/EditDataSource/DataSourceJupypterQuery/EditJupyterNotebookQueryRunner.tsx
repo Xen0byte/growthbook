@@ -1,11 +1,11 @@
 import { FC } from "react";
 import { useForm } from "react-hook-form";
-import CodeTextArea from "../../../Forms/CodeTextArea";
 import cloneDeep from "lodash/cloneDeep";
-import Code from "../../../SyntaxHighlighting/Code";
-import Modal from "../../../Modal";
-import { DataSourceQueryEditingModalBaseProps } from "../types";
 import { DataSourceInterfaceWithParams } from "back-end/types/datasource";
+import CodeTextArea from "@/components/Forms/CodeTextArea";
+import Code from "@/components/SyntaxHighlighting/Code";
+import Modal from "@/components/Modal";
+import { DataSourceQueryEditingModalBaseProps } from "@/components/Settings/EditDataSource/types";
 
 type EditJupyterNotebookQueryRunnerProps = DataSourceQueryEditingModalBaseProps;
 
@@ -32,6 +32,7 @@ export const EditJupyterNotebookQueryRunner: FC<EditJupyterNotebookQueryRunnerPr
 
   return (
     <Modal
+      trackingEventModalType=""
       open={true}
       submit={handleSubmit}
       close={onCancel}

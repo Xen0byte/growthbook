@@ -4,8 +4,8 @@ import {
   DataSourceEvents,
   DataSourceInterfaceWithParams,
 } from "back-end/types/datasource";
-import Field from "../../../Forms/Field";
-import Modal from "../../../Modal";
+import Field from "@/components/Forms/Field";
+import Modal from "@/components/Modal";
 
 type DataSourceEditExperimentEventPropertiesProps = {
   dataSource: DataSourceInterfaceWithParams;
@@ -25,6 +25,8 @@ export const DataSourceEditExperimentEventPropertiesModal: FC<DataSourceEditExpe
         dataSource.settings?.events?.experimentIdProperty || "",
       variationIdProperty:
         dataSource.settings?.events?.variationIdProperty || "",
+      extraUserIdProperty:
+        dataSource.settings?.events?.extraUserIdProperty || "",
     },
   });
 
@@ -35,6 +37,7 @@ export const DataSourceEditExperimentEventPropertiesModal: FC<DataSourceEditExpe
       experimentEvent: "",
       experimentIdProperty: "",
       variationIdProperty: "",
+      extraUserIdProperty: "",
     });
   });
 
@@ -46,6 +49,7 @@ export const DataSourceEditExperimentEventPropertiesModal: FC<DataSourceEditExpe
 
   return (
     <Modal
+      trackingEventModalType=""
       open={true}
       submit={handleSubmit}
       close={onCancel}
@@ -74,6 +78,17 @@ export const DataSourceEditExperimentEventPropertiesModal: FC<DataSourceEditExpe
                 label="Variation Id Property"
                 placeholder="Variant name"
                 {...form.register("variationIdProperty")}
+              />
+              <Field
+                label="Extra UserId Property (optional)"
+                placeholder=""
+                {...form.register("extraUserIdProperty")}
+                helpText={
+                  <>
+                    Will be added to the groupBy along with{" "}
+                    <code>distinct_id</code>.
+                  </>
+                }
               />
             </div>
           </div>

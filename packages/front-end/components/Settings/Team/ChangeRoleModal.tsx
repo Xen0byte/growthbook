@@ -1,9 +1,8 @@
 import React, { FC, useState } from "react";
-import Modal from "../../Modal";
-import RoleSelector from "./RoleSelector";
 import { MemberRoleWithProjects } from "back-end/types/organization";
-import { isCloud } from "../../../services/env";
-import UpgradeModal from "../UpgradeModal";
+import Modal from "@/components/Modal";
+import UpgradeModal from "@/components/Settings/UpgradeModal";
+import RoleSelector from "./RoleSelector";
 
 const ChangeRoleModal: FC<{
   displayInfo: string;
@@ -15,7 +14,7 @@ const ChangeRoleModal: FC<{
 
   const [upgradeModal, setUpgradeModal] = useState(false);
 
-  if (upgradeModal && isCloud()) {
+  if (upgradeModal) {
     return (
       <UpgradeModal
         close={() => setUpgradeModal(false)}
@@ -27,6 +26,7 @@ const ChangeRoleModal: FC<{
 
   return (
     <Modal
+      trackingEventModalType=""
       close={close}
       header="Change Role"
       open={true}

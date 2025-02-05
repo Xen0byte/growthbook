@@ -1,12 +1,13 @@
 import React, { FC, useCallback, useState } from "react";
-import { DataSourceQueryEditingModalBaseProps } from "../types";
 import { FaPencilAlt } from "react-icons/fa";
-import { DataSourceEditExperimentEventPropertiesModal } from "./DataSourceEditExperimentEventPropertiesModal";
 import {
   DataSourceEvents,
   DataSourceInterfaceWithParams,
 } from "back-end/types/datasource";
 import cloneDeep from "lodash/cloneDeep";
+import { DataSourceQueryEditingModalBaseProps } from "@/components/Settings/EditDataSource/types";
+import { DataSourceEditExperimentEventPropertiesModal } from "@/components/Settings/EditDataSource/DataSourceExperimentProperties/DataSourceEditExperimentEventPropertiesModal";
+import usePermissionsUtil from "@/hooks/usePermissionsUtils";
 
 type DataSourceViewEditExperimentPropertiesProps = DataSourceQueryEditingModalBaseProps;
 
@@ -14,8 +15,12 @@ export const DataSourceViewEditExperimentProperties: FC<DataSourceViewEditExperi
   onSave,
   onCancel,
   dataSource,
+  canEdit = true,
 }) => {
   const [uiMode, setUiMode] = useState<"view" | "edit">("view");
+
+  const permissionsUtil = usePermissionsUtil();
+  canEdit = canEdit && permissionsUtil.canUpdateDataSourceSettings(dataSource);
 
   const handleEdit = useCallback(() => {
     setUiMode("edit");
@@ -45,14 +50,16 @@ export const DataSourceViewEditExperimentProperties: FC<DataSourceViewEditExperi
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h3 className="mb-0">Query Settings</h3>
 
-        <div className="">
-          <button
-            className="btn btn-outline-primary font-weight-bold text-nowrap"
-            onClick={handleEdit}
-          >
-            <FaPencilAlt className="mr-1" /> Edit
-          </button>
-        </div>
+        {canEdit && (
+          <div className="">
+            <button
+              className="btn btn-outline-primary font-weight-bold text-nowrap"
+              onClick={handleEdit}
+            >
+              <FaPencilAlt className="mr-1" /> Edit
+            </button>
+          </div>
+        )}
       </div>
 
       <table className="table appbox gbtable mb-5">
@@ -77,6 +84,21 @@ export const DataSourceViewEditExperimentProperties: FC<DataSourceViewEditExperi
               <code>
                 {dataSource.settings?.events?.variationIdProperty || ""}
               </code>
+            </td>
+          </tr>
+          <tr>
+            <th>UserId Property</th>
+            <td>
+              <code>distinct_id</code>
+              {dataSource.settings?.events?.extraUserIdProperty && (
+                <>
+                  {" "}
+                  +{" "}
+                  <code>
+                    {dataSource.settings?.events?.extraUserIdProperty || ""}
+                  </code>
+                </>
+              )}
             </td>
           </tr>
         </tbody>

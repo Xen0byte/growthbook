@@ -5,16 +5,23 @@ import {
   ChangeEventHandler,
   ReactElement,
 } from "react";
-import { useAuth } from "../../services/auth";
 import { DataSourceInterfaceWithParams } from "back-end/types/datasource";
-import track from "../../services/track";
-import Modal from "../Modal";
-import SelectField from "../Forms/SelectField";
-import Button from "../Button";
-import { getInitialSettings } from "../../services/datasources";
-import { DocLink, DocSection } from "../DocLink";
-import ConnectionSettings from "./ConnectionSettings";
-import { dataSourceConnections } from "../../services/eventSchema";
+import { dataSourceConnections } from "@/services/eventSchema";
+import Button from "@/components/Button";
+import SelectField from "@/components/Forms/SelectField";
+import MultiSelectField from "@/components/Forms/MultiSelectField";
+import { getInitialSettings } from "@/services/datasources";
+import { DocLink, DocSection } from "@/components/DocLink";
+import { useAuth } from "@/services/auth";
+import track from "@/services/track";
+import Modal from "@/components/Modal";
+import ConnectionSettings from "@/components/Settings/ConnectionSettings";
+import { useDefinitions } from "@/services/DefinitionsContext";
+import { ensureAndReturn } from "@/types/utils";
+import usePermissionsUtil from "@/hooks/usePermissionsUtils";
+import useProjectOptions from "@/hooks/useProjectOptions";
+import Tooltip from "@/components/Tooltip/Tooltip";
+import EditSchemaOptions from "./EditSchemaOptions";
 
 const typeOptions = dataSourceConnections;
 
@@ -39,11 +46,30 @@ const DataSourceForm: FC<{
   cta = "Save",
   secondaryCTA,
 }) => {
+  const { projects } = useDefinitions();
   const [dirty, setDirty] = useState(false);
   const [datasource, setDatasource] = useState<
-    Partial<DataSourceInterfaceWithParams>
-  >(null);
+    Partial<DataSourceInterfaceWithParams> | undefined
+  >();
   const [hasError, setHasError] = useState(false);
+  const permissionsUtil = usePermissionsUtil();
+
+  const permissionRequired = (project: string) => {
+    return existing
+      ? permissionsUtil.canUpdateDataSourceParams({
+          projects: [project],
+          type: datasource?.type,
+        })
+      : permissionsUtil.canCreateDataSource({
+          projects: [project],
+          type: datasource?.type,
+        });
+  };
+
+  const projectOptions = useProjectOptions(
+    permissionRequired,
+    datasource?.projects || []
+  );
 
   useEffect(() => {
     track("View Datasource Form", {
@@ -77,7 +103,7 @@ const DataSourceForm: FC<{
       let id = data.id;
 
       // Update
-      if (data.id) {
+      if (id) {
         const res = await apiCall<{ status: number; message: string }>(
           `/datasource/${data.id}`,
           {
@@ -96,7 +122,10 @@ const DataSourceForm: FC<{
           body: JSON.stringify({
             ...datasource,
             settings: {
-              ...getInitialSettings("custom", datasource.params),
+              ...getInitialSettings(
+                "custom",
+                ensureAndReturn(datasource.params)
+              ),
               ...(datasource.settings || {}),
             },
           }),
@@ -121,16 +150,26 @@ const DataSourceForm: FC<{
     }
   };
 
-  const onChange: ChangeEventHandler<HTMLInputElement> = (e) => {
+  const onChange: ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement> = (
+    e
+  ) => {
     setDatasource({
       ...datasource,
       [e.target.name]: e.target.value,
     });
     setDirty(true);
   };
+  const onManualChange = (name, value) => {
+    setDatasource({
+      ...datasource,
+      [name]: value,
+    });
+    setDirty(true);
+  };
 
   return (
     <Modal
+      trackingEventModalType=""
       inline={inline}
       open={true}
       submit={handleSubmit}
@@ -165,7 +204,7 @@ const DataSourceForm: FC<{
       )}
       <SelectField
         label="Data Source Type"
-        value={datasource.type}
+        value={datasource.type || typeOptions[0].type}
         onChange={(value) => {
           const option = typeOptions.filter((o) => o.type === value)[0];
           if (!option) return;
@@ -211,10 +250,46 @@ const DataSourceForm: FC<{
           value={datasource.name}
         />
       </div>
+      <div className="form-group">
+        <label>Description</label>
+        <textarea
+          className="form-control"
+          name="description"
+          onChange={onChange}
+          value={datasource.description}
+        />
+      </div>
+      {projects?.length > 0 && (
+        <div className="form-group">
+          <MultiSelectField
+            label={
+              <>
+                Projects{" "}
+                <Tooltip
+                  body={`The dropdown below has been filtered to only include projects where you have permission to ${
+                    existing ? "update" : "create"
+                  } Data Sources.`}
+                />
+              </>
+            }
+            placeholder="All projects"
+            value={datasource.projects || []}
+            options={projectOptions}
+            onChange={(v) => onManualChange("projects", v)}
+            customClassName="label-overflow-ellipsis"
+            helpText="Assign this data source to specific projects"
+          />
+        </div>
+      )}
       <ConnectionSettings
         datasource={datasource}
         existing={existing}
         hasError={hasError}
+        setDatasource={setDatasource}
+        setDirty={setDirty}
+      />
+      <EditSchemaOptions
+        datasource={datasource}
         setDatasource={setDatasource}
         setDirty={setDirty}
       />

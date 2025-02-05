@@ -1,8 +1,8 @@
 import React, { FC, useMemo } from "react";
 import { useForm } from "react-hook-form";
-import Modal from "../../../Modal";
-import Field from "../../../Forms/Field";
 import { DataSourceInterfaceWithParams } from "back-end/types/datasource";
+import Modal from "@/components/Modal";
+import Field from "@/components/Forms/Field";
 
 type EditIdentifierTypeProps = {
   dataSource: DataSourceInterfaceWithParams;
@@ -63,6 +63,7 @@ export const EditIdentifierType: FC<EditIdentifierTypeProps> = ({
 
   return (
     <Modal
+      trackingEventModalType=""
       open={true}
       submit={handleSubmit}
       close={onCancel}
